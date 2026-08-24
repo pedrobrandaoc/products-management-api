@@ -1,0 +1,19 @@
+model Product {
+  id       String  @id @default(uuid())
+  name     String
+  price    Decimal @db.Decimal(10, 2)
+  stock    Int     @default(0)
+  isActive Boolean @default(true)
+
+  createdById String
+  createdBy   User   @relation("ProductCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  updatedById String?
+  updatedBy   User?   @relation("ProductUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdById]) // índice para buscas pelo criador
+  @@index([updatedById]) // índice para buscas pelo último usuário que atualizou
+}

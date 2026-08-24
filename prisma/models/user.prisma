@@ -1,0 +1,14 @@
+model User {
+  id           String @id @default(uuid())
+  name         String
+  email        String @unique
+  passwordHash String
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdProducts Product[] @relation("ProductCreatedBy") // produtos criados por este usuário
+  updatedProducts Product[] @relation("ProductUpdatedBy") // produtos atualizados por este usuário
+}
