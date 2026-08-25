@@ -11,6 +11,7 @@ export const userRepository = {
     });
   },
 
+  // procura usuario pelo id
   async findById(id: string) {
     return prisma.user.findUnique({
       where: {

@@ -4,9 +4,10 @@ import cors from "cors";
 
 import { env } from "./config/env.js";
 import { sessionMiddleware } from "./config/session.js";
+import { errorMiddleware } from "./middlewares/error.middleware.js";
 
 import { authRouter } from "./modules/auth/auth.routes.js";
-import { errorMiddleware } from "./middlewares/error.middleware.js";
+import { productRouter } from "./modules/products/product.routes.js";
 
 const app = express(); // cria a aplicação express por meio de um objeto
 
@@ -32,7 +33,9 @@ app.get("/health", (req, res) => {
     message: "Ok :)",
   });
 });
+
 app.use("/auth", authRouter);
+app.use("/products", productRouter);
 
 // se houver algum erro, o express busca esse middleware para tratar
 app.use(errorMiddleware);
