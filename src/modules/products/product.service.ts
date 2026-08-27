@@ -62,15 +62,54 @@ export async function editProductByIdService(id: string, data: EditProduct) {
   }
 
   return productRepository.editById(id, data);
-};
+}
 
 export async function deleteProductByIdService(id: string) {
   const product = await productRepository.findById(id);
 
   if (!product) {
     throw new AppError("Produto não encontrado.", 404);
-  };
+  }
 
   return productRepository.deleteById(id);
-
 }
+
+export async function increaseStock(id: string, quantity: number) {
+  if (quantity <= 0) {
+    throw new AppError("A quantidade deve ser maior que zero.", 400);
+  };
+
+  const product = await productRepository.findById(id);
+
+  if (!product) {
+    throw new AppError("Produto não encontrado.", 400);
+  };
+
+  if (!product.isActive) {
+    throw new AppError("Produto inativo.", 400);
+  };
+
+  return productRepository.increaseStock(id, quantity);
+};
+
+export async function decreaseStock(id: string, quantity: number) {
+  if (quantity % 1 !== 0) {
+    throw new AppError("A quantidade deve ser um número inteiro.", 400);
+  };
+
+  if (quantity <= 0) {
+    throw new AppError("A quantidade deve ser um número positivo", 400);
+  };
+
+  const product = await productRepository.getStockById(id);
+
+  if (!product) {
+    throw new AppError("Produto não encontrado.", 400);
+  };
+
+  if (product.stock < quantity) {
+    throw new AppError('Estoque insuficiente.', 400);
+  };
+
+  return productRepository.decreaseStock(id, quantity);
+};

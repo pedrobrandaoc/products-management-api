@@ -96,4 +96,43 @@ export const productRepository = {
       },
     });
   },
+
+  async increaseStock(id: string, quantity: number) {
+    return prisma.product.update({
+      where: {
+        id,
+      },
+      data: {
+        stock: {
+          increment: quantity,
+        },
+      },
+    });
+  },
+
+  async decreaseStock(id: string, quantity: number) {
+    return prisma.product.update({
+      where: {
+        id,
+      },
+      data: {
+        stock: {
+          decrement: quantity,
+        },
+      },
+    });
+  },
+
+  async getStockById(id: string) {
+    const product = await prisma.product.findUnique({
+      where: {
+        id,
+      },
+      select: {
+        stock: true,
+      },
+    });
+
+    return product;
+  },
 };
