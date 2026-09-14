@@ -11,4 +11,6 @@ model User {
 
   createdProducts Product[] @relation("ProductCreatedBy") // produtos criados por este usuário
   updatedProducts Product[] @relation("ProductUpdatedBy") // produtos atualizados por este usuário
+  invoicesCreated Invoice[] @relation("InvoiceCreatedBy")
+  invoicesUpdated Invoice[] @relation("InvoiceUpdatedBy")
 }

@@ -11,8 +11,9 @@ model Product {
   updatedById String?
   updatedBy   User?   @relation("ProductUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  invoiceItems InvoiceItem[]
 
   @@index([createdById]) // índice para buscas pelo criador
   @@index([updatedById]) // índice para buscas pelo último usuário que atualizou

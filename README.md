@@ -1,8 +1,8 @@
-# Product Management API
+# Product & Invoice Management API
 
-API REST desenvolvida com **Node.js, Express, TypeScript, PostgreSQL e Prisma**, com foco em autenticação segura baseada em sessões, organização profissional por camadas e boas práticas de segurança.
+API REST desenvolvida com **Node.js, Express, TypeScript, PostgreSQL e Prisma**, com foco em autenticação segura baseada em sessões, organização profissional por camadas, controle de estoque e gestão de faturas com validação de estados.
 
-O projeto foi construído com finalidade de estudo e evolução para um sistema com CRUD protegido, auditoria de usuários e controle de acesso.
+O projeto foi construído com finalidade de estudo e evolução para um sistema completo com CRUD protegido, auditoria de usuários, transições controladas e controle de acesso.
 
 ## Tecnologias
 
@@ -21,7 +21,7 @@ O projeto foi construído com finalidade de estudo e evolução para um sistema 
 
 ## Arquitetura
 
-A aplicação segue uma separação de responsabilidades por camadas:
+A aplicação segue uma separação rigorosa de responsabilidades por camadas:
 
 ```text
 request
@@ -45,34 +45,35 @@ Responsabilidades principais:
 
 ```text
 routes
-→ definição dos endpoints
+→ definição dos endpoints e mapeamento de rotas
 
 middlewares
 → autenticação, segurança, csrf, rate limiting e tratamento de erros
 
 controllers
-→ entrada e saída http
+→ recepção de requisições http, validação de schemas (Zod) e envio de respostas
 
 services
-→ regras de negócio
+→ aplicação de regras de negócio, transições de estado e orquestração
 
 repositories
-→ acesso e persistência no banco
+→ acesso direto e persistência no banco de dados via Prisma
 
 prisma
-→ orm e gerenciamento do schema
+→ orm, gerenciamento do schema e tipagem
 
 postgresql
-→ persistência dos dados
+→ persistência relacional dos dados
 ```
 
-## Estrutura
+## Estrutura do Projeto
 
 ```text
 .
 ├── prisma/
 │   ├── migrations/
 │   ├── models/
+│   │   ├── invoice.prisma
 │   │   ├── product.prisma
 │   │   └── user.prisma
 │   └── schema.prisma
@@ -99,15 +100,23 @@ postgresql
 │   │   │   ├── auth.schema.ts
 │   │   │   └── auth.service.ts
 │   │   │
-│   │   └── users/
-│   │       └── user.repository.ts
+│   │   ├── invoice/
+│   │   │   ├── invoice.controller.ts
+│   │   │   ├── invoice.routes.ts
+│   │   │   ├── invoice.schema.ts
+│   │   │   ├── invoice.service.ts
+│   │   │   └── invoice.repository.ts
+│   │   │
+│   │   └── products/
+│   │       ├── product.controller.ts
+│   │       ├── product.routes.ts
+│   │       ├── product.schema.ts
+│   │       ├── product.service.ts
+│   │       └── product.repository.ts
 │   │
 │   ├── shared/
-│   │   ├── errors/
-│   │   │   └── app-error.ts
-│   │   └── security/
-│   │       ├── csrf.ts
-│   │       └── password.ts
+│   │   └── errors/
+│   │       └── app-error.ts
 │   │
 │   ├── types/
 │   │   └── express-session.d.ts
@@ -148,20 +157,9 @@ sessão salva no postgresql
 cookie httpOnly enviado ao cliente
 ```
 
-O cookie contém apenas o identificador da sessão.
+O cookie contém apenas o identificador da sessão. Os dados sensíveis e o vínculo de usuário ficam armazenados de forma segura no servidor.
 
-Os dados da sessão ficam no servidor:
-
-```text
-session
-├── sid
-├── sess
-│   ├── userId
-│   └── csrfToken
-└── expire
-```
-
-## Endpoints de autenticação
+### Endpoints de Autenticação
 
 ```http
 POST /auth/register
@@ -171,570 +169,106 @@ POST /auth/logout
 GET  /auth/csrf-token
 ```
 
-### Register
+## Módulo de Produtos (CRUD)
+
+O sistema conta com um CRUD completo de produtos, garantindo auditoria de criação e alteração (`createdBy`, `updatedBy`) além de controle de desativação lógica (`isActive`).
+
+### Endpoints de Produtos
 
 ```http
-POST /auth/register
+POST   /products
+GET    /products
+GET    /products/:id
+PATCH  /products/:id
+DELETE /products/:id
 ```
 
-Exemplo:
+## Módulo de Faturas (Invoices) e Controle de Estoque
 
-```json
-{
-  "name": "Pedro",
-  "email": "pedro@example.com",
-  "password": "SenhaForte123!"
-}
-```
+As faturas gerenciam o ciclo de vida comercial e contábil, integrando-se diretamente ao estoque dos produtos por meio de operações de incremento (`incrementStock`) e decremento (`decrementStock`).
 
-Fluxo:
+### Estados da Fatura (`InvoiceStatus`)
+- **`DRAFT` (Rascunho):** Estado inicial onde a fatura pode ser editada e seus itens ajustados.
+- **`ISSUED` (Emitida):** Fatura consolidada e emitida. Uma vez emitida, não pode retornar ao estado de rascunho.
+- **`CANCELLED` (Cancelada):** Fatura cancelada. Uma fatura cancelada não pode ser emitida e, ao ser cancelada, os itens associados retornam automaticamente ao estoque da empresa (`incrementStock`).
 
-```text
-request
-↓
-registerSchema
-↓
-registerController
-↓
-registerService
-↓
-verificação de email
-↓
-argon2id
-↓
-userRepository
-↓
-prisma
-↓
-postgresql
-```
-
-A senha original nunca é armazenada.
-
-## Password hashing
-
-As senhas são protegidas utilizando **Argon2id**.
-
-```text
-password
-↓
-argon2id
-↓
-passwordHash
-↓
-postgresql
-```
-
-Durante o login:
-
-```text
-password enviada
-+
-passwordHash armazenado
-↓
-argon2.verify()
-↓
-true / false
-```
-
-Também é utilizado um hash fictício durante tentativas com email inexistente para reduzir diferenças de tempo que poderiam ajudar na enumeração de usuários.
-
-## Sessões
-
-As sessões são gerenciadas por:
-
-```text
-express-session
-+
-connect-pg-simple
-+
-postgresql
-```
-
-O servidor salva:
-
-```ts
-req.session.userId
-```
-
-após autenticação válida.
-
-No login, a sessão é regenerada antes de associar o usuário:
-
-```text
-sessão anterior
-↓
-regenerate()
-↓
-novo session id
-↓
-userId
-↓
-csrfToken
-```
-
-Isso reduz riscos de **session fixation**.
-
-## Cookies
-
-Configuração principal:
-
-```text
-httpOnly
-→ impede leitura do cookie pelo javascript do navegador
-
-sameSite
-→ reduz envio indevido entre sites
-
-secure
-→ habilitado em produção para exigir https
-
-maxAge
-→ define o tempo de vida do cookie
-```
-
-O cookie e a sessão possuem controle de expiração.
-
-## CSRF
-
-A API utiliza proteção CSRF baseada em token armazenado na sessão.
-
-Fluxo:
-
-```text
-GET /auth/csrf-token
-↓
-cliente recebe csrfToken
-
-requisição protegida
-↓
-X-CSRF-Token
-↓
-csrfProtection
-↓
-comparação com session.csrfToken
-```
-
-Exemplo:
+### Endpoints de Faturas
 
 ```http
-X-CSRF-Token: token-gerado-pelo-servidor
-```
-
-Operações autenticadas que alteram estado podem exigir:
-
-```text
-requireAuth
-+
-csrfProtection
-```
-
-## Rate limiting
-
-As rotas de autenticação possuem limites independentes.
-
-Exemplo:
-
-```text
-login
-→ proteção contra brute force
-
-register
-→ proteção contra criação abusiva de contas
-```
-
-Quando o limite é excedido:
-
-```http
-429 Too Many Requests
+POST   /invoice
+GET    /invoice
+GET    /invoice/:id
+PATCH  /invoice/:id/issue
+PATCH  /invoice/:id/cancel
 ```
 
 ## Segurança
 
-A aplicação implementa atualmente:
+A aplicação implementa um conjunto robusto de práticas defensivas:
 
-- Argon2id para armazenamento de senhas
-- sessões persistentes no PostgreSQL
-- regeneração de sessão após login
-- cookies `HttpOnly`
-- cookies `Secure` em produção
-- `SameSite`
-- proteção CSRF
-- rate limiting
-- validação de entrada com Zod
-- Helmet
-- CORS restritivo
-- tratamento global de erros
-- mensagens genéricas no login
-- redução de enumeração de usuários
-- variáveis de ambiente validadas
-- remoção de `X-Powered-By`
-- middleware de autenticação
+- **Argon2id:** Armazenamento seguro de senhas.
+- **Sessões Persistentes:** Gerenciadas no PostgreSQL com regeneração pós-login (mitigação de *session fixation*).
+- **Cookies Seguros:** `HttpOnly`, `Secure` (em produção) e políticas rígidas de `SameSite`.
+- **Proteção CSRF:** Baseada em tokens validados por sessão para mutações de estado.
+- **Rate Limiting:** Limites independentes em rotas críticas para evitar ataques de força bruta.
+- **Validação Estrita:** Validação de payload de entrada e parâmetros de rota utilizando **Zod**.
+- **Headers de Segurança:** Implementação via **Helmet** e CORS restritivo.
+- **Tratamento Global de Erros:** Respostas padronizadas sem exposição de rastros internos do servidor (`AppError`).
 
-## Autorização
+## Banco de Dados & Prisma
 
-Rotas privadas utilizam:
+O projeto utiliza **PostgreSQL** em conjunto com o **Prisma ORM**. O schema do banco é modularizado na pasta `prisma/models/`, separando as entidades `User`, `Product` e `Invoice`.
 
-```text
-requireAuth
-```
-
-Fluxo:
-
-```text
-request
-↓
-sessão recuperada
-↓
-req.session.userId existe?
-├── não → 401
-└── sim → next()
-```
-
-Autenticação responde:
-
-> quem é o usuário?
-
-A autorização do CRUD será responsável por responder:
-
-> esse usuário pode realizar esta ação?
-
-## Banco de dados
-
-O projeto utiliza PostgreSQL.
-
-Exemplo de conexão:
-
-```env
-DATABASE_URL="postgresql://usuario:senha@localhost:5432/database"
-```
-
-Caracteres especiais na senha devem utilizar URL encoding.
-
-Exemplo:
-
-```text
-# → %23
-```
-
-## Prisma
-
-O Prisma é utilizado para:
-
-- definição dos models
-- migrations
-- Prisma Client
-- acesso tipado ao banco
-
-O schema está dividido em múltiplos arquivos:
-
-```text
-prisma/
-├── schema.prisma
-└── models/
-    ├── user.prisma
-    └── product.prisma
-```
-
-O `prisma.config.ts` aponta para:
-
-```ts
-schema: "prisma"
-```
-
-### Comandos principais
+### Comandos úteis do Prisma
 
 Validar schema:
-
 ```bash
 npx prisma validate
 ```
 
-Formatar:
-
-```bash
-npx prisma format
-```
-
-Criar migration:
-
-```bash
-npx prisma migrate dev --name nome_da_migration
-```
-
 Gerar Prisma Client:
-
 ```bash
 npx prisma generate
 ```
 
-Status das migrations:
-
-```bash
-npx prisma migrate status
-```
-
-Resetar banco de desenvolvimento:
-
-```bash
-npx prisma migrate reset
-```
-
-Produção:
-
-```bash
-npx prisma migrate deploy
-```
-
-## Model User
-
-O usuário permanece registrado mesmo após deixar de utilizar o sistema.
-
-```text
-isActive = true
-→ acesso permitido
-
-isActive = false
-→ usuário desativado
-```
-
-Isso preserva histórico e auditoria.
-
-O usuário não deve ser removido apenas porque um funcionário deixou a empresa.
-
-## Model Product
-
-Produtos possuem informações de auditoria:
-
-```text
-createdBy
-→ usuário responsável pela criação
-
-updatedBy
-→ último usuário responsável pela alteração
-```
-
-Também possuem:
-
-```text
-isActive
-```
-
-permitindo desativar produtos sem apagar seu histórico.
-
-As relações utilizam foreign keys e índices para manter integridade e melhorar consultas.
-
-## Variáveis de ambiente
-
-Exemplo:
-
-```env
-NODE_ENV=development
-
-PORT=3000
-
-DATABASE_URL=
-
-SESSION_SECRET=
-
-FRONTEND_URL=
-```
-
-O arquivo real:
-
-```text
-.env
-```
-
-não deve ser enviado ao Git.
-
-O projeto disponibiliza:
-
-```text
-.env.example
-```
-
-para documentar as variáveis necessárias.
-
-## Ambientes
-
-### development
-
-```text
-NODE_ENV=development
-secure cookie=false
-trust proxy desabilitado
-banco local
-```
-
-### test
-
-```text
-NODE_ENV=test
-banco separado
-dados descartáveis
-secure cookie=false
-```
-
-### production
-
-```text
-NODE_ENV=production
-https
-secure cookie=true
-secrets de produção
-trust proxy conforme infraestrutura
-```
-
-## Scripts
-
-Desenvolvimento:
-
-```bash
-npm run dev
-```
-
-Build:
-
-```bash
-npm run build
-```
-
-Produção:
-
-```bash
-npm start
-```
-
-Fluxo:
-
-```text
-development
-src/*.ts
-↓
-tsx watch
-↓
-node
-```
-
-```text
-production
-src/*.ts
-↓
-tsc
-↓
-dist/*.js
-↓
-node
-```
-
-## Instalação
-
-Clone o repositório:
-
-```bash
-git clone <repository-url>
-```
-
-Entre na pasta:
-
-```bash
-cd express-auth-api
-```
-
-Instale as dependências:
-
-```bash
-npm install
-```
-
-Crie:
-
-```text
-.env
-```
-
-usando:
-
-```text
-.env.example
-```
-
-como referência.
-
-Gere o Prisma Client:
-
-```bash
-npx prisma generate
-```
-
-Aplique as migrations:
-
+Executar migrações em desenvolvimento:
 ```bash
 npx prisma migrate dev
 ```
 
-Inicie:
+Deploy de migrações em produção:
+```bash
+npx prisma migrate deploy
+```
 
+## Instalação e Execução
+
+Clone o repositório:
+```bash
+git clone <repository-url>
+cd <project-folder>
+```
+
+Instale as dependências:
+```bash
+npm install
+```
+
+Configure as variáveis de ambiente baseando-se no arquivo de exemplo:
+```bash
+cp .env.example .env
+```
+*(Preencha a variável `DATABASE_URL` e as demais chaves no arquivo `.env`)*
+
+Gere o Prisma Client e execute as migrations:
+```bash
+npx prisma generate
+npx prisma migrate dev
+```
+
+Inicie o servidor em modo de desenvolvimento:
 ```bash
 npm run dev
 ```
 
-A API ficará disponível, por padrão, em:
-
-```text
-http://localhost:3000
-```
-
-## Git
-
-Arquivos que não devem ser versionados:
-
-```gitignore
-node_modules/
-dist/
-.env
-src/generated/prisma/
-
-.vscode/
-.DS_Store
-Thumbs.db
-```
-
-As migrations devem ser versionadas:
-
-```text
-prisma/migrations/
-```
-
-## Status
-
-Implementado:
-
-- estrutura Express + TypeScript
-- PostgreSQL
-- Prisma
-- migrations
-- User
-- register
-- login
-- logout
-- sessão persistente
-- `/auth/me`
-- Argon2id
-- Zod
-- tratamento de erros
-- autenticação por middleware
-- CSRF
-- rate limiting
-- Helmet
-- CORS
-- configuração por ambiente
-
-Em desenvolvimento:
-
-- CRUD de Products
-- autorização por usuário
-- auditoria do CRUD
-- testes automatizados
-- deploy
+A API estará rodando por padrão em `http://localhost:3000`.

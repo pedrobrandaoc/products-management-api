@@ -1,0 +1,28 @@
+model Invoice {
+  id           String        @id @default(uuid())
+  number       Int           @unique
+  customerName String
+  status       InvoiceStatus @default(DRAFT)
+  total        Decimal       @db.Decimal(10, 2)
+
+  createdById String
+  createdBy   User   @relation("InvoiceCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  updatedById String?
+  updatedBy   User?   @relation("InvoiceUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  items InvoiceItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdById])
+  @@index([updatedById])
+  @@index([status])
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  CANCELLED
+}

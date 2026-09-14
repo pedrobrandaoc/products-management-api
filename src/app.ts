@@ -8,6 +8,7 @@ import { errorMiddleware } from "./middlewares/error.middleware.js";
 
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { productRouter } from "./modules/products/product.routes.js";
+import { invoiceRouter } from "./modules/invoice/invoice.routes.js";
 
 const app = express(); // cria a aplicação express por meio de um objeto
 
@@ -36,6 +37,7 @@ app.get("/health", (req, res) => {
 
 app.use("/auth", authRouter);
 app.use("/products", productRouter);
+app.use("/invoice", invoiceRouter);
 
 // se houver algum erro, o express busca esse middleware para tratar
 app.use(errorMiddleware);

@@ -38,7 +38,7 @@ export async function createProductController(req: Request, res: Response) {
     message: "Produto criado com sucesso.",
     product,
   });
-}
+};
 
 export async function listProductController(req: Request, res: Response) {
   const data = listProductsSchema.parse(req.query);
@@ -56,7 +56,7 @@ export async function listProductByIdController(req: Request, res: Response) {
   return res.status(200).json({
     product,
   });
-}
+};
 
 export async function editProductById(req: Request, res: Response) {
   const userId = req.session.userId;
