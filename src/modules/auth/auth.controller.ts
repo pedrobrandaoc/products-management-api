@@ -12,7 +12,7 @@ export async function registerController(req: Request, res: Response) {
 
   const user = await registerService(data);
 
-  return res.status(500).json({
+  return res.status(201).json({
     message: "Usuário registrado com sucesso.",
     user,
   });

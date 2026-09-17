@@ -64,14 +64,19 @@ export async function editProductByIdService(id: string, data: EditProduct) {
   return productRepository.editById(id, data);
 }
 
-export async function deleteProductByIdService(id: string) {
+export async function deactivateProductByIdService(id: string) {
   const product = await productRepository.findById(id);
 
   if (!product) {
-    throw new AppError("Produto não encontrado.", 404);
+    throw new AppError("produto não encontrado.", 404);
   }
 
-  return productRepository.deleteById(id);
+  // prevencao de processamento desnecessario
+  if (!product.isActive) {
+    throw new AppError("este produto já encontra-se desativado.", 400);
+  }
+
+  return productRepository.deactivateById(id);
 }
 
 export async function increaseStock(id: string, quantity: number) {

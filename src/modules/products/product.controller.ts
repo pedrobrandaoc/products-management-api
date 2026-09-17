@@ -5,7 +5,7 @@ import {
   listProductService,
   listProductByIdService,
   editProductByIdService,
-  deleteProductByIdService
+  deactivateProductByIdService
 } from "./product.service.js";
 
 import {
@@ -80,14 +80,15 @@ export async function editProductById(req: Request, res: Response) {
   });
 };
 
-export async function deleteProductByIdController(req: Request, res: Response) {
-  const { id } = deleteProductByIdSchema.parse(req.params);
+export async function deactivateProductByIdController(req: Request, res: Response) {
+    // se voce quiser, pode renomear o schema original para deactivateProductByIdSchema
+    const { id } = deleteProductByIdSchema.parse(req.params);
 
-  const product = await deleteProductByIdService(id);
+    const product = await deactivateProductByIdService(id);
 
-  return res.status(200).json({
-    message: 'Produto excluído com sucesso.',
-    product
-  });
+    return res.status(200).json({
+      message: 'produto desativado com sucesso.',
+      product
+    });
 
-};
+}

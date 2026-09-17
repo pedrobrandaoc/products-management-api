@@ -89,10 +89,14 @@ export const productRepository = {
     });
   },
 
-  async deleteById(id: string) {
-    return prisma.product.delete({
+  async deactivateById(id: string) {
+    // inativacao logica atualizando o status
+    return prisma.product.update({
       where: {
         id,
+      },
+      data: {
+        isActive: false,
       },
     });
   },

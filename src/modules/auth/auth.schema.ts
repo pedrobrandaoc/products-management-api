@@ -11,12 +11,12 @@ export const registerSchema = z.object({
     email: z
         .string()
         .trim()
-        .email()
+        .email('Email inválido.')
         .toLowerCase(),
 
     password: z
         .string()
-        .min(12)
+        .min(12, 'A senha deve conter 12 ou mais caracteres.')
         .max(128),
 });
 

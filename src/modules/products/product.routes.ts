@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { createProductController, listProductController, listProductByIdController, editProductById, deleteProductByIdController } from "./product.controller.js";
+import { createProductController, listProductController, listProductByIdController, editProductById, deactivateProductByIdController } from "./product.controller.js";
 import { requireAuth } from "../../middlewares/require-auth.middleware.js";
 import { csrfProtection } from "../../middlewares/csrf.middleware.js";
 
@@ -16,7 +16,7 @@ productRouter.get('/', requireAuth, listProductController);
 productRouter.get('/:id', requireAuth, listProductByIdController);
 
 // edita produto pelo id
-productRouter.patch('/:id', requireAuth, editProductById);
+productRouter.patch('/:id', requireAuth, csrfProtection, editProductById);
 
-// deleta produto pelo id
-productRouter.delete('/:id', requireAuth, csrfProtection, deleteProductByIdController);
+// desativa produto pelo id
+productRouter.patch('/deactivate/:id', requireAuth, csrfProtection, deactivateProductByIdController);

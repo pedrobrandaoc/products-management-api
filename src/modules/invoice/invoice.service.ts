@@ -88,9 +88,22 @@ export async function createInvoiceService(data: CreateInvoiceInput) {
 export async function listInvoicesService(data: ListInvoices) {
   const result = await invoiceRepository.findAll(data.page, data.limit);
 
-  const invoices = result.invoices;
+  // Mapeia a lista de faturas para calcular o total de cada uma em tempo real
+  const invoices = result.invoices.map((invoice) => {
+    // Garante que a fatura tem a lista de itens antes de tentar somar
+    if (!invoice.items) return invoice;
 
-  const totalPages = Math.ceil(result.total / data.limit); //arredonda pra cima
+    const calculatedTotal = invoice.items.reduce((acc, item) => {
+      return acc + Number(item.total);
+    }, 0);
+
+    return {
+      ...invoice,
+      total: calculatedTotal.toString(), // Atualiza o total zerado pelo calculado
+    };
+  });
+
+  const totalPages = Math.ceil(result.total / data.limit); // arredonda pra cima
 
   return {
     invoices,
@@ -110,7 +123,14 @@ export async function listInvoiceByIdService(id: string) {
     throw new AppError("Id da fatura inválido ou inexistente.", 404);
   }
 
-  return invoice;
+  const calculatedTotal = invoice.items.reduce((acc, item) => {
+    return acc + Number(item.total);
+  }, 0);
+
+  return {
+    ...invoice,
+    total: calculatedTotal.toString() // Convertendo para string para manter o padrão da sua API
+  };
 }
 
 export async function issueInvoiceByIdService(id: string, userId: string) {
